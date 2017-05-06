@@ -7,7 +7,7 @@ var util = require("util");
 var EXTERNAL = /^\w[a-z\-0-9\.]+$/; // Match "react", "path", "fs", "lodash.random", etc.
 var PEERS = /UNMET PEER DEPENDENCY ([a-z\-0-9\.]+)@(.+)/gm;
 
-var defaultOptions = { dev: false, peerDependencies: true, quiet: false };
+var defaultOptions = { dev: false, peerDependencies: true, quiet: false, basedir: process.cwd() };
 var erroneous = [];
 
 function normalizeBabelPlugin(plugin, prefix) {
@@ -21,8 +21,8 @@ function normalizeBabelPlugin(plugin, prefix) {
   return prefix + plugin;
 }
 
-module.exports.packageExists = function packageExists() {
-  var pkgPath = path.resolve("package.json");
+module.exports.packageExists = function packageExists(options) {
+  var pkgPath = path.resolve(path.join(options.basedir, "package.json"));
   try {
     require.resolve(pkgPath);
     // Remove cached copy for future checks
@@ -33,7 +33,7 @@ module.exports.packageExists = function packageExists() {
   }
 }
 
-module.exports.check = function check(request) {
+module.exports.check = function check(request, options) {
   if (!request) {
     return;
   }
@@ -51,7 +51,7 @@ module.exports.check = function check(request) {
 
   // Ignore modules which can be resolved using require.resolve()'s algorithm
   try {
-    resolve.sync(dep, {basedir: process.cwd()});
+    resolve.sync(dep, {basedir: options.basedir});
     return;
   } catch(e) {
     // Module is not resolveable
@@ -60,9 +60,9 @@ module.exports.check = function check(request) {
   return dep;
 };
 
-module.exports.checkBabel = function checkBabel() {
+module.exports.checkBabel = function checkBabel(options) {
   try {
-    var babelrc = require.resolve(path.resolve(".babelrc"));
+    var babelrc = require.resolve(path.resolve(path.join(options.basedir, ".babelrc")));
   } catch (e) {
     // Babel isn't installed, don't install deps
     return;
@@ -132,7 +132,7 @@ module.exports.install = function install(deps, options) {
 
   var args = ["install"].concat(deps).filter(Boolean);
 
-  if (module.exports.packageExists()) {
+  if (module.exports.packageExists(options)) {
     args.push(options.dev ? "--save-dev" : "--save");
   }
 
@@ -146,7 +146,8 @@ module.exports.install = function install(deps, options) {
 
   // Ignore input, capture output, show errors
   var output = spawn.sync("npm", args, {
-    stdio: ["ignore", "pipe", "inherit"]
+    stdio: ["ignore", "pipe", "inherit"],
+    cwd: options.basedir
   });
 
   if (output.status) {

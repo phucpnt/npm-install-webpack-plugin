@@ -32,7 +32,7 @@ function NpmInstallPlugin(options) {
   this.options = Object.assign(installer.defaultOptions, options);
   this.resolving = {};
 
-  installer.checkBabel();
+  installer.checkBabel(options);
 }
 
 NpmInstallPlugin.prototype.apply = function(compiler) {
@@ -60,7 +60,7 @@ NpmInstallPlugin.prototype.install = function(result) {
     return;
   }
 
-  var dep = installer.check(result.request);
+  var dep = installer.check(result.request, this.options);
 
   if (dep) {
     var dev = this.options.dev;
